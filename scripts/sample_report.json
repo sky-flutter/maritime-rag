@@ -1,0 +1,265 @@
+{
+  "CONSUMPTION": [
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "AUX",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "HFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 2.56e-1,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "AUX",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "LSFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "AUX",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "LSMGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "AUX",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "MGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "BOILER",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "HFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "BOILER",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "LSFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "BOILER",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "LSMGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "BOILER",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "MGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "MAIN",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "HFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 2.81,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "MAIN",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "LSFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "MAIN",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "LSMGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CONSUMPTION": 0.0,
+      "CONSUMPTION_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "ENGINE_TYPE": "MAIN",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FUEL_TYPE": "MGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "UNIT": "mt",
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    }
+  ],
+  "FOROB": [
+    {
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FOROB_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "FUEL_TYPE": "HFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "ROB": 0.0,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FOROB_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "FUEL_TYPE": "LSFO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "ROB": 8.563800000000001e1,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FOROB_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "FUEL_TYPE": "LSMGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "ROB": 4.43574e2,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    },
+    {
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "FOROB_AS_OF_DATE": "2025-05-09 02:07:42.895 Z",
+      "FUEL_TYPE": "MGO",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "ROB": 0.0,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    }
+  ],
+  "MAIN_ENGINE": [
+    {
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "MAIN_ENGINE_OUTPUT": 6.0e3,
+      "MAIN_ENGINE_RUNNING_HOURS": 3.12,
+      "POWER_FROM_TORSIOMETER": 6.0e3,
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "RPM": 1.01e2,
+      "TURBO_CHARGER": 1.6e4,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    }
+  ],
+  "NAVIGATION": [
+    {
+      "COURSE": 0.0,
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "DRAFT_AFTER": 9.5,
+      "DRAFT_FORE": 9.5,
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "LATITUDE": 4.465e1,
+      "LONGITUDE": 1.4e1,
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "SPEED_OVER_GROUND": 1.312e1,
+      "SPEED_THROUGH_WATER": 1.312e1,
+      "TIME_SAILING": 3.2,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z"
+    }
+  ],
+  "REPORTS": {
+    "CUSTOMER_ID": "96ae43cf-567f-416d-b372-f43fdf97bbfe",
+    "CUSTOMER_NAME": "cargill",
+    "DATA_SOURCE": "cargill_azure_blob",
+    "DATETIME_GMT": "2025-03-18 11:00:00.000 Z",
+    "DATETIME_LOCAL": "2025-03-18 12:00:00.000 +0100",
+    "DELETED": false,
+    "DESTINATION_PORT": "DORTYOL OIL TERMINAL",
+    "DESTINATION_PORT_UNLO_CODE": "TRDYL",
+    "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+    "IMO": 9631383,
+    "IS_DQT_VALID": "not-yet-evaluated",
+    "LOGGED_DISTANCE": 4.2e1,
+    "OBSERVED_DISTANCE": 4.2e1,
+    "PERIOD_DURATION_HOURS": 3.2,
+    "PERIOD_END_GMT": "2025-03-18 11:00:00.000 Z",
+    "PERIOD_START_GMT": "2025-03-18 07:48:00.000 Z",
+    "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+    "REPORT_TYPE": "AT_SEA",
+    "SOURCE_DATA_ARRIVED_AT": "2025-05-09 02:07:42.895 Z",
+    "SOURCE_ID": "9def0b75-f503-f011-8500-02ee90e9be5f",
+    "UPDATED_AT": "2025-03-18 12:35:22.000 Z",
+    "VESSEL_CONDITION": "Laden",
+    "VOYAGE_NR": "7",
+    "type": "noon_report"
+  },
+  "WEATHER": [
+    {
+      "CURRENT_DIRECTION": 45,
+      "CUSTOMER_NAME": "cargill",
+      "DATA_SOURCE": "cargill_azure_blob",
+      "EXTERNAL_ID": "8f121f1e53cb329cbf1edd64f6672a48",
+      "REPORT_ID": "915154ed49f4ec139f7135ddfd30d6fc",
+      "SWELL_HEIGHT": 6.0e-1,
+      "UPDATED_AT": "2025-03-18 12:35:22.000 Z",
+      "WATER_TEMPERATURE": 1.5e1,
+      "WAVE_DIRECTION": 45,
+      "WAVE_HEIGHT": 6.0e-1,
+      "WAVE_LENGTH": 3.0,
+      "WIND_DIRECTION": 45,
+      "WIND_FORCE": 3.0,
+      "current": 1.0
+    }
+  ]
+}

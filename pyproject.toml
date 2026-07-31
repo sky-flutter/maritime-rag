@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "reports-mda-rag"
+version = "0.1.0"
+description = ""
+authors = ["Akash Kareliya"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.13.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
