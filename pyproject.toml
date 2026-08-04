@@ -10,6 +10,8 @@ python = "^3.11"
 pydantic = "^2.13.4"
 tiktoken = "^0.13.0"
 langchain-text-splitters = "^1.1.2"
+openai = "^2.53.0"
+python-dotenv = "^1.2.2"
 
 [build-system]
 requires = ["poetry-core"]
