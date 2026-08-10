@@ -1,0 +1,15 @@
+services:
+  db:
+    image: pgvector/pgvector:0.8.2-pg17   # pin, don't use :latest
+    environment:
+      POSTGRES_DB: maritime_rag
+      POSTGRES_PASSWORD: 'test_postgres'
+    command: >
+      postgres
+      -c shared_buffers=8GB
+      -c maintenance_work_mem=4GB
+      -c max_parallel_maintenance_workers=4
+      -c work_mem=64MB
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5433:5432"]
+volumes: { pgdata: }
