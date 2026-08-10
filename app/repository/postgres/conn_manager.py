@@ -1,18 +1,50 @@
 import psycopg2
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from psycopg2 import pool
-from app.repository.settings import POSTGRES_CONFIG, PG_SCHEMA
 from app.utils.logger import get_logger
 import threading
 
 logger = get_logger(__name__)
 
+class SessionScope:
+    """Class-based context manager, equivalent to the @contextmanager
+    generator version — commits on success, rolls back on error, always
+    closes the session.
+    """
+
+    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+        self._session_factory = session_factory
+        self._session: Session | None = None
+
+    def __enter__(self) -> Session:
+        self._session = self._session_factory()
+        return self._session
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        assert self._session is not None
+        try:
+            if exc_type is None:
+                self._session.commit()
+            else:
+                self._session.rollback()
+        finally:
+            self._session.close()
 
 class PostgresConnectionManager:
-    def __init__(self):
-        self.schema = PG_SCHEMA
+    def __init__(self, config: dict, database_url):
+        self._config = config
+        self.schema = 'public'
         self._connection_pool = None
         self._lock = threading.Lock()
         self._init_pool()
+        self._engine = create_engine(database_url, pool_pre_ping=True)
+        self._session_factory: sessionmaker[Session] = sessionmaker(
+            bind=self._engine, expire_on_commit=False
+        )
+
+    def session_scope(self) -> SessionScope:
+        return SessionScope(self._session_factory)
 
     def _init_pool(self):
         """Initialize the connection pool"""
@@ -20,7 +52,7 @@ class PostgresConnectionManager:
             self._connection_pool = pool.ThreadedConnectionPool(
                 minconn=1,
                 maxconn=10,
-                **POSTGRES_CONFIG
+                **self._config
             )
             logger.info("Database connection pool initialized successfully")
         except psycopg2.Error as e:
@@ -42,7 +74,7 @@ class PostgresConnectionManager:
                 with connection.cursor() as cursor:
                     cursor.execute(f'SET search_path TO {self.schema}')
                     connection.commit()
-            
+
             return connection
         except psycopg2.Error as e:
             logger.error(f"Error getting connection from pool: {e}")
@@ -53,7 +85,7 @@ class PostgresConnectionManager:
                 pass
             # Create a new connection directly as fallback
             try:
-                connection = psycopg2.connect(**POSTGRES_CONFIG)
+                connection = psycopg2.connect(**self._config)
                 if self.schema:
                     cursor = connection.cursor()
                     cursor.execute(f'SET search_path TO {self.schema}')
@@ -96,3 +128,4 @@ class PostgresConnectionManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - don't close pool here since it's shared"""
         pass
+
