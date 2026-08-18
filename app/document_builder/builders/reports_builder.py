@@ -1,6 +1,9 @@
 from app.document_builder.sections import SectionBuilder
 from app.document_builder.models import DocumentSection
-
+from app.retrieval.filterable_query_fields import (
+    DATETIME_KEY,
+    FILTERABLE_METADATA_FIELDS, DATETIME_SOURCE_JSON_KEY,
+)
 
 class ReportsSectionBuilder(SectionBuilder):
     """Builds the header section from the REPORTS block (a single dict,
@@ -41,9 +44,12 @@ class ReportsSectionBuilder(SectionBuilder):
         """
         if not raw_section:
             return {}
-        return {
-            "imo": raw_section.get("IMO"),
-            "voyage_nr": raw_section.get("VOYAGE_NR"),
-            "report_type": raw_section.get("REPORT_TYPE"),
-            "vessel_condition": raw_section.get("VESSEL_CONDITION"),
+
+        metadata = {
+            field.key: raw_section.get(field.source_json_key)
+            for field in FILTERABLE_METADATA_FIELDS
         }
+
+        metadata[DATETIME_KEY] = raw_section.get(DATETIME_SOURCE_JSON_KEY)
+
+        return metadata

@@ -17,4 +17,5 @@ class ReportChunkORM(VectorStoreBase):
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM), nullable=False)
     embedding_model: Mapped[str] = mapped_column(String, nullable=False)
     chunk_metadata: Mapped[dict] = mapped_column(JSON, nullable=False, default={})
+    report_datetime_gmt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
