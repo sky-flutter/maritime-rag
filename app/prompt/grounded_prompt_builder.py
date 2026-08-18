@@ -44,11 +44,17 @@ RESPONSE_SCHEMA = {
 
 class GroundedPromptBuilder(PromptBuilder):
     def _format_excerpt(self, excerpt_id: str, chunk: RetrievedChunk) -> str:
-        report_id = chunk.report_id
+        imo = chunk.metadata.get("imo", "unknown")
+        voyage_nr = chunk.metadata.get("voyage_nr", "unknown")
+        datetime_gmt = chunk.metadata.get("datetime_gmt", "unknown")
         section = chunk.metadata.get("section", "unknown")
-        return (
-            f"[{excerpt_id}] (report: {report_id}, section: {section}\n{chunk.content})"
+
+        header = (
+            f"[{excerpt_id}] Vessel IMO: {imo} | Voyage: {voyage_nr} | "
+            f"Report datetime: {datetime_gmt} | Section: {section}"
         )
+
+        return f"{header}\n{chunk.content}"
 
     def build(self, question: str, chunks: list[RetrievedChunk]) -> PromptResult:
         source_map: dict[str, RetrievedChunk] = {
