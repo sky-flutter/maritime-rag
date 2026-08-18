@@ -46,7 +46,7 @@ class PgVectorStore(VectorStore):
             stmt = insert(ReportChunkORM).values(
                 rows,
             )
-            stmt.on_conflict_do_update(
+            stmt=stmt.on_conflict_do_update(
                 index_elements=["chunk_id"],
                 set_={
                     "content": stmt.excluded.content,
