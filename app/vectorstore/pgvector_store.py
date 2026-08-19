@@ -98,7 +98,6 @@ class PgVectorStore(VectorStore):
             """
             )
 
-            print(query.text % params)
             results = session.execute(query, params).mappings().all()
 
             return [

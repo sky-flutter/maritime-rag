@@ -1,7 +1,7 @@
 from typing import Generator, List, Tuple, Union, Dict
 from jinja2 import Environment, select_autoescape
-from api.utils.logger import get_logger
-from app.repository.postgres.connection_manager import PostgresConnectionManager
+from app.utils.logger import get_logger
+from app.repository.postgres.conn_manager import PostgresConnectionManager
 
 logger = get_logger(__name__)
 
