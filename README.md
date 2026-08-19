@@ -1,647 +1,382 @@
-# Maritime RAG
+# Maritime Reports RAG
 
-A production-ready Retrieval-Augmented Generation (RAG) framework for structured reports stored in PostgreSQL.
+A Retrieval-Augmented Generation (RAG) service over **structured** vessel voyage
+reports stored as JSONB in PostgreSQL.
 
-The Report Knowledge Engine transforms structured business data (JSON or relational data) into searchable knowledge that can be queried using Large Language Models (LLMs).
+Raw report JSON is turned into human-readable sections, chunked, embedded, and
+stored in `pgvector`. At query time an LLM extracts structured filters from the
+question, a hybrid search (vector similarity + metadata/datetime filters) pulls
+the most relevant chunks, and a second LLM call answers **strictly** from those
+chunks with citations back to the source reports.
 
-Although this project was initially designed for maritime reports, the architecture is generic and can be adapted to healthcare, manufacturing, logistics, finance, IoT, and other domains.
-
----
-
-# Architecture
-
-```
-                    PostgreSQL
-                         │
-                         ▼
-                 Report Repository
-                         │
-                         ▼
-                Document Builder
-                         │
-                         ▼
-                    Document Model
-                         │
-                         ▼
-                     Chunker
-                         │
-                         ▼
-               Embedding Service
-                         │
-                         ▼
-                  Vector Store
-                         │
-                         ▼
-                     Retriever
-                         │
-                         ▼
-                  Prompt Builder
-                         │
-                         ▼
-                       LLM
-                         │
-                         ▼
-                     Response
-```
+Although built for maritime reports, every layer is provider-agnostic and the
+domain knowledge is isolated to `document_builder/` and
+`retrieval/filterable_query_fields.py` — swapping in another domain means
+rewriting those, not the pipeline.
 
 ---
 
-# End-to-End Flow
+## Stack
 
-```
-User Question
-      │
-      ▼
-Generate Query Embedding
-      │
-      ▼
-Hybrid Search
-(Vector + Metadata)
-      │
-      ▼
-Retrieve Top Chunks
-      │
-      ▼
-Build Prompt
-      │
-      ▼
-LLM
-      │
-      ▼
-Final Answer
-```
+| Concern | Choice |
+| --- | --- |
+| Language | Python ^3.11, Poetry |
+| API | FastAPI + Uvicorn |
+| Database | PostgreSQL 17 + pgvector 0.8.2 |
+| ORM / migrations | SQLAlchemy 2.x (`DeclarativeBase`), Alembic |
+| Embeddings | OpenAI `text-embedding-3-small` (1536-dim) |
+| LLM | OpenAI `gpt-4o-mini` (structured JSON output) |
+| Tokenizer | tiktoken (`cl100k_base`) |
+| Chunk splitting | `langchain-text-splitters` (`RecursiveCharacterTextSplitter`) |
 
 ---
 
-# Indexing Pipeline
+## Architecture
+
+Every layer is an ABC with a concrete implementation behind it, so providers can
+be swapped without touching callers.
+
+| Layer | Contract | Implementation |
+| --- | --- | --- |
+| `repository/` | `BaseRepository[T]` | `ReportRepository` (Postgres) |
+| `document_builder/` | `SectionBuilder` | 6 section builders via `build_default_registry()` |
+| `chunking/` | `Chunker`, `TokenCounter` | `SectionChunker`, `TiktokenCounter` |
+| `embeddings/` | `EmbeddingProvider` | `OpenAIEmbeddingProvider` (+ `EmbeddingService` batching) |
+| `vectorstore/` | `VectorStore` | `PgVectorStore` |
+| `indexing/` | — | `IndexingOrchestrator`, `WatermarkStore` |
+| `retrieval/` | `Retriever`, `QueryAnalyzer` | `VectorRetriever`, `LLMQueryAnalyzer` |
+| `prompt/` | `PromptBuilder` | `GroundedPromptBuilder` |
+| `llm/` | `LLMService` | `OpenAILLMService` |
+| `api/` | — | FastAPI router + `Depends` wiring |
+
+### Indexing pipeline
 
 ```
-PostgreSQL
-     │
-     ▼
-Load Report
-     │
-     ▼
-Document Builder
-     │
-     ▼
-Document Sections
-     │
-     ▼
-Chunking
-     │
-     ▼
-Generate Embeddings
-     │
-     ▼
-Store in pgvector
+report_documents (JSONB)
+        │
+        ▼
+ReportRepository.get_by_id()          → Report (domain model, raw_json untouched)
+        │
+        ▼
+DocumentBuilder.build()               → Document + DocumentSections
+        │                                (one SectionBuilder per JSON key)
+        ▼
+SectionChunker.chunk()                → Chunk[]  (1 chunk/section; splits if >500 tokens)
+        │
+        ▼
+EmbeddingService.embed_chunks()       → EmbeddedChunk[]  (batches of 100)
+        │
+        ▼
+PgVectorStore.upsert()                → report_chunks (vector + JSONB metadata)
 ```
+
+`IndexingOrchestrator` drives this incrementally: it reads the watermark, fetches
+the next batch of reports with `updated_at > watermark`, indexes each one, and
+only advances the watermark if the **whole** batch succeeded. Any failure raises
+`IndexingBatchError` with the offending `report_id` and leaves the watermark
+untouched, so the batch is retried on the next run.
+
+### Query pipeline
+
+```
+POST /query  { question, top_k }
+        │
+        ▼
+LLMQueryAnalyzer.analyze()            → QueryAnalysis
+        │                                (imo, voyage_nr, report_type,
+        │                                 vessel_condition, destination_port,
+        │                                 section, datetime range)
+        ▼
+VectorRetriever.retrieve()            → embeds question, then
+        │                                PgVectorStore.similarity_search()
+        │                                = cosine similarity
+        │                                + chunk_metadata ->> filters
+        │                                + report_datetime_gmt range
+        ▼
+GroundedPromptBuilder.build()         → PromptResult
+        │                                (system prompt + numbered excerpts
+        │                                 + JSON response schema + source_map)
+        ▼
+OpenAILLMService.generate_answer()    → Answer { answered, text, sources }
+        │
+        ▼
+QueryResponse  { answer, answered, source_ids[] }
+```
+
+**Grounding guarantees.** The system prompt forbids outside knowledge and
+requires the model to cite excerpt numbers. `OpenAILLMService._to_answer` then
+resolves those numbers back through `source_map` — if the model claims an answer
+but cites nothing resolvable, the response is downgraded to `answered: false`.
+Citations are therefore verified, not trusted.
 
 ---
 
-# Repository Structure
+## Repository structure
 
 ```
-maritime-rag/
-
-│
+reports-mda-rag/
 ├── app/
-│
 │   ├── api/
-│   │
+│   │   ├── main.py                 FastAPI app, /health
+│   │   ├── route/query.py          POST /query
+│   │   ├── schemas.py              QueryRequest / QueryResponse / SourceResponse
+│   │   └── dependencies.py         Depends providers
 │   ├── repository/
-│   │
+│   │   ├── base.py                 BaseRepository[T]
+│   │   ├── models.py               Report, ReportNotFoundError
+│   │   ├── config.py               POSTGRES_CONFIG from env
+│   │   ├── report_repository.py    report_documents → Report
+│   │   └── postgres/
+│   │       ├── conn_manager.py     psycopg2 pool + SQLAlchemy session_scope
+│   │       └── orm_models.py       ReportDocumentORM
 │   ├── document_builder/
-│   │
-│   ├── chunking/
-│   │
-│   ├── embeddings/
-│   │
-│   ├── vectorstore/
-│   │
-│   ├── retrieval/
-│   │
-│   ├── llm/
-│   │
-│   ├── services/
-│   │
-│   ├── models/
-│   │
-│   ├── utils/
-│   │
-│   └── config.py
-│
-├── scripts/
-│
-├── tests/
-│
-├── docs/
-│
-├── docker/
-│
-├── migrations/
-│
-├── pyproject.toml
-│
-└── README.md
+│   │   ├── document_builder.py     orchestrates the registry
+│   │   ├── registry.py             JSON key → SectionBuilder
+│   │   ├── sections.py             SectionBuilder ABC
+│   │   ├── formatters.py           shared value/unit formatting
+│   │   ├── models.py               Document, DocumentSection
+│   │   └── builders/               reports, weather, navigation,
+│   │                               consumption, forob, main_engine
+│   ├── chunking/                   Chunker, SectionChunker, TokenCounter
+│   ├── embeddings/                 EmbeddingProvider, EmbeddingService, factory
+│   ├── vectorstore/                VectorStore, PgVectorStore, ReportChunkORM
+│   ├── indexing/                   IndexingOrchestrator, WatermarkStore
+│   ├── retrieval/                  Retriever, QueryAnalyzer, filterable fields
+│   ├── prompt/                     PromptBuilder, GroundedPromptBuilder
+│   ├── llm/                        LLMService, OpenAILLMService, Answer
+│   └── utils/logger.py
+├── scripts/                        ingestion, indexing, per-layer smoke scripts
+├── migrations/                     Alembic config + versions
+├── docker/docker-compose.yml       pgvector/pgvector:0.8.2-pg17
+├── data/raw/                       source CSVs (gitignored)
+├── docs/                           (empty)
+└── tests/                          (empty — see Known gaps)
 ```
 
 ---
 
-# Folder Responsibilities
+## Database schema
+
+Three tables, all created by Alembic migrations:
+
+**`report_documents`** — source of truth for raw reports.
+`report_id` (PK), `data_source`, `customer_name`, `imo`, `report_type`,
+`datetime_gmt`, `report_json` (JSONB), `record_hash`, `operation_type`,
+`updated_at`.
+
+**`report_chunks`** — the vector index.
+`chunk_id` (PK, `{report_id}:{section}` or `{report_id}:{section}:{i}`),
+`report_id`, `content`, `embedding` `vector(1536)`, `embedding_model`,
+`chunk_metadata` (JSONB), `report_datetime_gmt`, `created_at`.
+Indexes: `ivfflat (embedding vector_cosine_ops) WITH (lists = 100)`,
+`report_id`, and `report_datetime_gmt`.
+
+**`indexing_watermark`** — incremental indexing cursor.
+`id` (PK, always `"default"`), `last_processed_updated_at`, `updated_at`.
+
+`report_datetime_gmt` is denormalized onto each chunk (parsed out of
+`chunk_metadata.datetime_gmt` at upsert time) so datetime filtering happens on a
+real indexed timestamp column instead of a JSONB cast.
 
 ---
 
-## api/
+## Setup
 
-Responsible for exposing REST endpoints.
+### 1. Dependencies
 
-Example
-
-```
-POST /index/report
-
-POST /search
-
-POST /chat
+```bash
+poetry install
 ```
 
-Contains
+### 2. Start Postgres + pgvector
 
-```
-routes.py
-
-schemas.py
-
-dependencies.py
+```bash
+docker compose -f docker/docker-compose.yml up -d
 ```
 
-No business logic belongs here.
+Exposes Postgres on **5433** (not 5432) with database `maritime_rag`.
 
----
+### 3. Configure `.env`
 
-## repository/
+```env
+OPENAI_API_KEY=sk-...
 
-Responsible for talking to PostgreSQL.
+PG_HOST=localhost
+PG_PORT=5433
+PG_DATABASE=maritime_rag
+PG_SCHEMA=public
+PG_USER=postgres
+PG_PASSWORD=test_postgres
 
+DATABASE_URL=postgresql+psycopg2://postgres:test_postgres@localhost:5433/maritime_rag
+
+# Guardrail while developing — caps how many chunks get embedded per run
+EMBEDDING_DRY_RUN=true
+EMBEDDING_DRY_RUN_LIMIT=2
 ```
-repository/
 
-    postgres.py
+`DATABASE_URL` drives SQLAlchemy **and** Alembic (`migrations/alembic/env.py`
+overrides `sqlalchemy.url` from the environment, so the placeholder in
+`alembic.ini` is never used).
 
-    report_repository.py
+### 4. Run migrations
 
-    report_embedding_repository.py
+```bash
+poetry run alembic -c migrations/alembic.ini upgrade head
 ```
 
-Responsibilities
+### 5. Load reports
 
-- Read reports
-- Save embeddings
-- Read metadata
-- Execute SQL
+Drop CSVs into `data/raw/` (each row needs `REPORT_ID`, `REPORT_JSON`, `IMO`,
+`DATETIME_GMT`, `UPDATED_AT`, …), then:
 
-Nothing else.
-
----
-
-## document_builder/
-
-Responsible for converting structured JSON into business documents.
-
-Input
-
+```bash
+poetry run python -m scripts.ingest_reports_from_csv
 ```
+
+Upserts in batches of 500 into `report_documents`.
+
+### 6. Index
+
+```bash
+# incremental, watermark-driven — the real entry point
+poetry run python -m scripts.run_indexing
+
+# or index the first N reports directly, ignoring the watermark
+poetry run python -m scripts.index_reports
+```
+
+Set `EMBEDDING_DRY_RUN=false` before a real indexing run.
+
+### 7. Serve the API
+
+```bash
+poetry run uvicorn app.api.main:app --reload
+```
+
+- `GET /health` → `{"status": "ok"}`
+- `GET /docs` → OpenAPI UI
+- `POST /query`
+
+```bash
+curl -X POST http://localhost:8000/query \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "What was the wind force for IMO 9876543 on 12 March?", "top_k": 5}'
+```
+
+```json
 {
-   "weather":{...},
-   "navigation":{...}
+  "answer": "Wind force was Beaufort 6 ...",
+  "answered": true,
+  "source_ids": [
+    {
+      "chunk_id": "5e9045232724a5aaed20e33eb26a5cdd:weather",
+      "report_id": "5e9045232724a5aaed20e33eb26a5cdd",
+      "section": "weather",
+      "similarity_score": 0.83
+    }
+  ]
 }
 ```
 
-Output
+---
 
-```
-WEATHER
+## Report sections
 
-Wind Force 6
+`build_default_registry()` maps each top-level JSON key to a builder. Adding a
+section type is a one-line registry entry — no other code changes.
 
-Sea State 5
+| JSON key | Builder | Section name |
+| --- | --- | --- |
+| `REPORTS` | `ReportsSectionBuilder` | `report_header` |
+| `WEATHER` | `WeatherSectionBuilder` | `weather` |
+| `NAVIGATION` | `NavigationSectionBuilder` | `navigation` |
+| `CONSUMPTION` | `ConsumptionSectionBuilder` | `consumption` |
+| `FOROB` | `ForobSectionBuilder` | `forob` |
+| `MAIN_ENGINE` | `MainEngineSectionBuilder` | `main_engine` |
 
-NAVIGATION
+`ReportsSectionBuilder` is special: besides its own section it also implements
+`extract_document_metadata()`, which lifts the retrieval-filterable fields to the
+`Document` level so every chunk inherits them.
 
-Speed 13 knots
-```
-
-Structure
-
-```
-document_builder/
-
-    builder.py
-
-    sections.py
-
-    models.py
-
-    formatters.py
-
-    templates.py
-```
+See [app/document_builder/README.md](app/document_builder/README.md) for the
+section-builder conventions.
 
 ---
 
-## chunking/
+## Filterable fields
 
-Responsible for splitting documents.
+`app/retrieval/filterable_query_fields.py` is the single source of truth for what
+the query analyzer may extract. Each `FilterableField` carries the metadata key,
+the source JSON key, and an LLM-facing description — the same list generates both
+the document metadata and the LLM's JSON extraction schema, so the two can't
+drift apart.
 
-Input
-
-```
-Document
-```
-
-Output
-
-```
-Chunk
-
-Chunk
-
-Chunk
-```
-
-Contains
-
-```
-chunker.py
-
-strategies.py
-```
-
-Possible strategies
-
-- Section Chunking
-
-- Recursive Chunking
-
-- Token Chunking
-
-- Semantic Chunking
+Currently: `imo`, `voyage_nr`, `report_type`, `vessel_condition`,
+`destination_port`, plus `section` (constrained to `KNOWN_SECTIONS`) and a
+`datetime_gmt` range.
 
 ---
 
-## embeddings/
+## Scripts
 
-Responsible for generating embeddings.
+| Script | Purpose |
+| --- | --- |
+| `ingest_reports_from_csv.py` | CSV → `report_documents` (batched upsert) |
+| `run_indexing.py` | Watermark-driven incremental indexing |
+| `index_reports.py` | Index the first `LIMIT` reports, watermark-free |
+| `test_document_builder.py` | Section building against `sample_report.json` |
+| `test_chunker.py` | Chunk boundaries and token counts |
+| `test_embedding.py` | Embedding provider round-trip |
+| `test_vector_store.py` | Upsert + similarity search |
+| `test_retriever.py` | Query analysis → retrieval |
+| `test_prompt_builder.py` | Prompt assembly and `source_map` |
+| `test_llm_service.py` | Grounded answer generation |
 
-Contains
-
-```
-embedding_service.py
-
-providers.py
-```
-
-Responsibilities
-
-```
-Chunk
-
-↓
-
-OpenAI
-
-↓
-
-Embedding
-```
-
-Provider implementations can include
-
-- OpenAI
-
-- Voyage
-
-- Ollama
-
-- HuggingFace
-
-- Azure OpenAI
+The `test_*.py` scripts are **manual smoke scripts** run with
+`python -m scripts.<name>`, not pytest tests.
 
 ---
 
-## vectorstore/
+## Design principles
 
-Responsible for vector persistence.
-
-Contains
-
-```
-pgvector_repository.py
-
-models.py
-```
-
-Responsibilities
-
-Store
-
-Retrieve
-
-Delete
-
-Similarity Search
-
-No prompt logic belongs here.
+- **Single responsibility** — each layer does one thing; the repository never
+  formats text, the vector store never builds prompts.
+- **Dependency inversion** — callers depend on ABCs (`Retriever`, `VectorStore`,
+  `LLMService`); factories in `embeddings/factory.py`, `retrieval/factory.py`,
+  and `llm/factory.py` are the only places that name concrete classes.
+- **Domain knowledge at the edges** — report-shape knowledge lives only in
+  section builders and the filterable-field registry. `Report.raw_json` is
+  passed through the repository untouched.
+- **Provider agnostic** — embeddings, LLM, tokenizer, and vector store are all
+  swappable behind their interfaces.
+- **Grounded by construction** — citations are resolved against the retrieved
+  chunks, and an uncited "answer" is reported as unanswered.
+- **Idempotent indexing** — chunk IDs are deterministic (`{report_id}:{section}`)
+  so re-indexing a report replaces its chunks rather than duplicating them.
 
 ---
 
-## retrieval/
+## Known gaps
 
-Responsible for finding the most relevant chunks.
-
-Pipeline
-
-```
-Question
-
-↓
-
-Metadata Filter
-
-↓
-
-Vector Search
-
-↓
-
-Re-ranking
-
-↓
-
-Top Chunks
-```
-
-Contains
-
-```
-retriever.py
-
-hybrid_search.py
-
-reranker.py
-```
+- `tests/` and `docs/` are empty — no automated test suite yet.
+- `OpenAIEmbeddingProvider.embed_batch` *returns* `EmbeddingProviderException`
+  instead of raising it after exhausting retries.
+- Deleted or shrunk reports leave orphaned chunks — the upsert replaces chunks it
+  sees but never deletes ones that no longer exist.
+- Metadata filter keys are interpolated into the SQL string (values are bound);
+  keys come from the fixed field registry, so this is safe today but fragile.
+- `EmbeddingService.embed_chunks` accepts a `limit`, but the dry-run env vars are
+  read by the factory and not applied automatically by the indexing path.
 
 ---
 
-## llm/
-
-Responsible for interacting with LLMs.
-
-Contains
-
-```
-prompt_builder.py
-
-answer_service.py
-
-providers.py
-```
-
-Responsibilities
-
-Build prompts
-
-Call LLM
-
-Parse responses
-
-Nothing related to embeddings.
-
----
-
-## services/
-
-High-level orchestration.
-
-Example
-
-```
-IndexReportService
-
-SearchService
-
-ChatService
-```
-
-A service coordinates multiple modules.
-
-Example
-
-```
-Repository
-
-↓
-
-Document Builder
-
-↓
-
-Chunker
-
-↓
-
-Embedding
-
-↓
-
-Vector Store
-```
-
----
-
-## models/
-
-Shared models.
-
-Examples
-
-```
-Document
-
-DocumentSection
-
-Chunk
-
-EmbeddingRecord
-
-SearchResult
-```
-
----
-
-## utils/
-
-Shared helper functions.
-
-Examples
-
-```
-logger.py
-
-time.py
-
-validators.py
-
-json_utils.py
-```
-
----
-
-## scripts/
-
-Standalone scripts.
-
-Examples
-
-```
-index_all_reports.py
-
-rebuild_embeddings.py
-
-cleanup.py
-```
-
----
-
-## tests/
-
-```
-unit/
-
-integration/
-
-fixtures/
-```
-
-Each module should have dedicated tests.
-
----
-
-## docs/
-
-Architecture documentation.
-
-Examples
-
-```
-architecture.md
-
-chunking.md
-
-retrieval.md
-
-embedding.md
-```
-
----
-
-# Data Models
-
-```
-Report
-      │
-      ▼
-Document
-      │
-      ▼
-Document Sections
-      │
-      ▼
-Chunks
-      │
-      ▼
-Embeddings
-```
-
----
-
-# Execution Flow
-
-```
-Load Report
-
-↓
-
-Build Document
-
-↓
-
-Generate Sections
-
-↓
-
-Chunk Sections
-
-↓
-
-Generate Embeddings
-
-↓
-
-Store Embeddings
-
-↓
-
-Wait for User Query
-
-↓
-
-Embed Query
-
-↓
-
-Hybrid Search
-
-↓
-
-Retrieve Chunks
-
-↓
-
-Build Prompt
-
-↓
-
-LLM
-
-↓
-
-Response
-```
-
----
-
-# Design Principles
-
-- Single Responsibility Principle (SRP): Each module has one clear responsibility.
-- Dependency Inversion: High-level services depend on interfaces, not concrete implementations.
-- Extensibility: Embedding providers, vector stores, and LLMs can be swapped with minimal changes.
-- Testability: Every layer can be unit tested in isolation.
-- Domain-Driven Design: Business concepts such as `Report`, `Document`, `Section`, and `Chunk` are first-class models.
-- Provider Agnostic: Supports multiple embedding models, LLMs, and vector databases.
-
----
-
-# Future Enhancements
-
-- Multi-modal RAG (images, PDFs, attachments)
-- Cross-report reasoning
-- Knowledge graph integration
-- Agentic workflows
+## Roadmap
+
+- Re-ranking after vector search
+- Hybrid BM25 + vector retrieval
+- Cross-report reasoning and aggregation queries
 - Streaming responses
-- Multi-language support
-- Feedback-based retrieval optimization
-- Citation and source attribution
-- Incremental indexing via CDC/Kafka
+- Incremental indexing via CDC/Kafka instead of a polled watermark
 - Observability with OpenTelemetry
+- Multi-modal reports (PDFs, attachments)
